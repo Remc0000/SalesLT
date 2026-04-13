@@ -1,0 +1,24 @@
+# Temporary/generated files
+export_test/
+template_nb/
+nb_config.json
+test_create.json
+test_payload.json
+create_*.json
+
+# Debug/test scripts
+debug_nb.py
+check_nb.py
+
+# Python
+__pycache__/
+*.pyc
+
+# VS Code
+.vscode/
+
+# Copilot memories
+.github/memories/
+
+# Embedded repos
+skills-for-fabric/

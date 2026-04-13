@@ -1,0 +1,65 @@
+{
+  "properties": {
+    "activities": [
+      {
+        "name": "Bronze - Ingest Raw Data",
+        "type": "TridentNotebook",
+        "dependsOn": [],
+        "policy": {
+          "timeout": "0.02:00:00",
+          "retry": 1,
+          "retryIntervalInSeconds": 60
+        },
+        "typeProperties": {
+          "notebookId": "4bb3046d-eec5-4d5f-8a04-e5a8c8278d47",
+          "workspaceId": "ec826010-6b5e-4526-a88c-38b9511e2927"
+        }
+      },
+      {
+        "name": "Silver - Transform and Validate",
+        "type": "TridentNotebook",
+        "dependsOn": [
+          {
+            "activity": "Bronze - Ingest Raw Data",
+            "dependencyConditions": [
+              "Succeeded"
+            ]
+          }
+        ],
+        "policy": {
+          "timeout": "0.02:00:00",
+          "retry": 1,
+          "retryIntervalInSeconds": 60
+        },
+        "typeProperties": {
+          "notebookId": "70ec788d-19c2-40bc-961d-71af1f9028d5",
+          "workspaceId": "ec826010-6b5e-4526-a88c-38b9511e2927"
+        }
+      },
+      {
+        "name": "Gold - Build Star Schema",
+        "type": "TridentNotebook",
+        "dependsOn": [
+          {
+            "activity": "Silver - Transform and Validate",
+            "dependencyConditions": [
+              "Succeeded"
+            ]
+          }
+        ],
+        "policy": {
+          "timeout": "0.02:00:00",
+          "retry": 1,
+          "retryIntervalInSeconds": 60
+        },
+        "typeProperties": {
+          "notebookId": "1ffe352e-888e-493c-9921-e28613981658",
+          "workspaceId": "ec826010-6b5e-4526-a88c-38b9511e2927"
+        }
+      }
+    ],
+    "annotations": [],
+    "lastModifiedByObjectId": "00000000-0000-0000-0000-000000000000",
+    "lastPublishTime": "2026-04-13T00:00:00Z"
+  }
+}

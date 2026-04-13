@@ -22,7 +22,7 @@
 # COMMAND ----------
 
 from pyspark.sql import SparkSession
-from pyspark.sql.functions import *
+from pyspark.sql.functions import col, lit, when, concat, year, quarter, month, dayofmonth, dayofweek, dayofyear, weekofyear, date_format, to_date, current_date, current_timestamp, row_number, sum as spark_sum
 from pyspark.sql.types import *
 from pyspark.sql.window import Window
 from datetime import datetime, timedelta
@@ -270,8 +270,6 @@ def build_gold_address():
         col("AddressLine1"),
         col("AddressLine2"),
         col("City"),
-        col("StateProvince"),
-        col("CountryRegion"),
         col("PostalCode"),
         col("ModifiedDate")
     )
@@ -289,17 +287,27 @@ def build_gold_address():
         .withColumn("EffectiveDate", current_date_val) \
         .withColumn("EndDate", lit(None).cast("date"))
     
-    # Create "Unknown" address
+    # Create "Unknown" address with explicit schema (None values need type hints)
+    unknown_schema = StructType([
+        StructField("AddressKey", IntegerType(), False),
+        StructField("AddressID", IntegerType(), False),
+        StructField("AddressLine1", StringType(), True),
+        StructField("AddressLine2", StringType(), True),
+        StructField("City", StringType(), True),
+        StructField("PostalCode", StringType(), True),
+        StructField("ModifiedDate", TimestampType(), True),
+        StructField("IsCurrent", BooleanType(), True),
+        StructField("EffectiveDate", DateType(), True),
+        StructField("EndDate", DateType(), True),
+    ])
     unknown_address = spark.createDataFrame([
-        (-1, -1, "Unknown", None, "Unknown", None, None, "00000", 
+        (-1, -1, "Unknown", None, "Unknown", "00000", 
          datetime.now(), True, datetime.now().date(), None)
-    ], ["AddressKey", "AddressID", "AddressLine1", "AddressLine2", "City",
-        "StateProvince", "CountryRegion", "PostalCode", "ModifiedDate",
-        "IsCurrent", "EffectiveDate", "EndDate"])
+    ], unknown_schema)
     
     dim_address = dim_address.select(
         "AddressKey", "AddressID", "AddressLine1", "AddressLine2", "City",
-        "StateProvince", "CountryRegion", "PostalCode", "ModifiedDate",
+        "PostalCode", "ModifiedDate",
         "IsCurrent", "EffectiveDate", "EndDate"
     ).union(unknown_address)
     
@@ -363,24 +371,24 @@ def build_gold_fact_sales():
     
     # Lookup OrderDateKey
     fact_sales = fact_sales.join(
-        dim_date_lookup.select(col("Date").cast("date").alias("OrderDate"), 
+        dim_date_lookup.select(col("Date").cast("date").alias("_join_order_date"), 
                                col("DateKey").alias("OrderDateKey")),
-        to_date(fact_sales.OrderDate) == col("OrderDate"), "inner"
-    ).drop("OrderDate")
+        to_date(fact_sales.OrderDate) == col("_join_order_date"), "inner"
+    ).drop("_join_order_date").drop(fact_sales.OrderDate)
     
     # Lookup DueDateKey
     fact_sales = fact_sales.join(
-        dim_date_lookup.select(col("Date").cast("date").alias("DueDate"),
+        dim_date_lookup.select(col("Date").cast("date").alias("_join_due_date"),
                                col("DateKey").alias("DueDateKey")),
-        to_date(fact_sales.DueDate) == col("DueDate"), "inner"
-    ).drop("DueDate")
+        to_date(fact_sales.DueDate) == col("_join_due_date"), "inner"
+    ).drop("_join_due_date").drop(fact_sales.DueDate)
     
     # Lookup ShipDateKey (nullable)
     fact_sales = fact_sales.join(
-        dim_date_lookup.select(col("Date").cast("date").alias("ShipDate"),
+        dim_date_lookup.select(col("Date").cast("date").alias("_join_ship_date"),
                                col("DateKey").alias("ShipDateKey")),
-        to_date(fact_sales.ShipDate) == col("ShipDate"), "left"
-    ).drop("ShipDate")
+        to_date(fact_sales.ShipDate) == col("_join_ship_date"), "left"
+    ).drop("_join_ship_date").drop(fact_sales.ShipDate)
     
     # Lookup ShipToAddressKey (nullable)
     fact_sales = fact_sales.join(
@@ -463,8 +471,8 @@ logger.info(f"gold_Dim_Address: {gold_dim_address.count():,} rows")
 logger.info(f"gold_Fact_Sales: {gold_fact_sales.count():,} rows")
 
 # Business metrics
-total_revenue = gold_fact_sales.agg(sum("LineTotal")).collect()[0][0]
-total_profit = gold_fact_sales.agg(sum("LineProfit")).collect()[0][0]
+total_revenue = gold_fact_sales.agg(spark_sum("LineTotal")).collect()[0][0]
+total_profit = gold_fact_sales.agg(spark_sum("LineProfit")).collect()[0][0]
 total_orders = gold_fact_sales.select("SalesOrderID").distinct().count()
 
 logger.info("\nBUSINESS METRICS")

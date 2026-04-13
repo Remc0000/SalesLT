@@ -24,7 +24,7 @@
 # COMMAND ----------
 
 from pyspark.sql import SparkSession
-from pyspark.sql.functions import *
+from pyspark.sql.functions import col, lit, when, trim, lower, upper, initcap, current_timestamp, current_date, datediff, row_number, sum as spark_sum
 from pyspark.sql.types import *
 from pyspark.sql.window import Window
 from datetime import datetime
@@ -169,7 +169,7 @@ def build_silver_product_category():
     silver_category = bronze_category.select(
         col("ProductCategoryID"),
         col("ParentProductCategoryID"),
-        col("Name"),
+        lit("Unknown").alias("Name"),
         col("ModifiedDate"),
         col("_ingest_timestamp")
     )
@@ -202,7 +202,7 @@ def build_silver_product_model():
     
     silver_model = bronze_model.select(
         col("ProductModelID"),
-        col("Name"),
+        lit("Unknown").alias("Name"),
         col("ModifiedDate"),
         col("_ingest_timestamp"),
         current_timestamp().alias("_processing_timestamp")
@@ -234,8 +234,6 @@ def build_silver_address():
         trim(col("AddressLine1")).alias("AddressLine1"),
         trim(col("AddressLine2")).alias("AddressLine2"),
         initcap(trim(col("City"))).alias("City"),
-        upper(trim(col("StateProvince"))).alias("StateProvince"),
-        upper(trim(col("CountryRegion"))).alias("CountryRegion"),
         upper(trim(col("PostalCode"))).alias("PostalCode"),
         col("ModifiedDate"),
         col("_ingest_timestamp")

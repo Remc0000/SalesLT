@@ -22,10 +22,11 @@
 # COMMAND ----------
 
 from pyspark.sql import SparkSession
-from pyspark.sql.functions import *
+from pyspark.sql.functions import col, lit, current_timestamp, current_date, when, sum as spark_sum
 from pyspark.sql.types import *
 from datetime import datetime
 import logging
+from builtins import sum as builtins_sum
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -157,7 +158,7 @@ logger.info(f"Total duration: {total_duration:.2f}s")
 
 if successful:
     logger.info("\nSuccessful ingestions:")
-    total_rows = sum(r["rows"] for r in successful)
+    total_rows = builtins_sum(r["rows"] for r in successful)
     for result in successful:
         logger.info(f"  ✓ {result['table']}: {result['rows']:,} rows")
     logger.info(f"\nTotal rows ingested to Bronze: {total_rows:,}")
